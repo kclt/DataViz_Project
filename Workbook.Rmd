@@ -1,0 +1,309 @@
+---
+title: "Data Visualization Workbook"
+author: "Kevin LT Chan"
+output:
+  pdf_document: default
+---
+```{r Setup}
+
+```
+
+```{r library, warning= FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(imputeTS)
+library(lubridate)
+library(padr)
+library(stringr)
+library(forecast)
+library(ggseas)
+library(trend)
+library(Kendall)
+library(rvest)
+library(rworldmap)
+library(gpclib)
+library(grid)
+library(gridExtra)
+```
+
+```{r source_scrapping, message=FALSE, warning = FALSE}
+noaa_txt_download <- function(buoy_station,start_year,end_year){
+  
+  # Create director folder for buoy_station
+  dir.create(paste0("./Source/",buoy_station))
+  
+  # For loop function to save files from start year to end year
+  for (year in start_year:end_year){
+        
+        url <- paste0("https://www.ndbc.noaa.gov/view_text_file.php?filename=",
+                      buoy_station,"h",year,".txt.gz&dir=data/historical/stdmet/")
+        
+        tryCatch(download.file(url,
+                      paste0("./Source/",
+                             buoy_station,"/", buoy_station, "_", year,".txt")),
+                 error = function(e) {
+                   # If file doesn't exist for that year write to missing file
+                   write(paste(buoy_station,year,sep = ","),
+                         file = "./Error/Missing_files.csv",
+                         append = TRUE)
+                 })
+}
+}
+```
+
+```{r combining_files, message = FALSE}
+
+noaa_combine_file <- function(n,buoy_station){
+
+    header <- scan(paste0("./Source/",buoy_station,"/",n), 
+                   nlines = 1, 
+                   what = character())
+    data <- read.table(paste0("./Source/",buoy_station,"/",n), 
+                       skip = 2, 
+                       header = FALSE, 
+                       fill = TRUE)[1:16]
+    names(data) <- header[1:16]
+    as.tibble(data)
+    
+    data.tidy <- data %>% 
+      # Select a specific hour
+      dplyr::filter(hh == 13) %>% 
+      # Select wanted variables
+      select(YY = contains("YY"), MM ,DD, 
+             Air_temp = ATMP, 
+             Sea_temp = WTMP, 
+             Wind_speed = WSPD) %>%  
+             #Dewpoint_temp = DEWP) %>% 
+      # Due to changing naming convention of YYYY to YY we have to adjust for the change 
+      mutate(YY = ifelse(str_length(YY)==2,str_c(19,YY,sep = "", collapse = NULL),YY)) %>% 
+      mutate(Date = paste(as.character(YY),as.character(MM),as.character(DD), sep = "-")) %>%
+      # Replace Missing values
+      mutate(Air_temp = replace(Air_temp, Air_temp == 999.0,NA)) %>% 
+      mutate(Sea_temp = replace(Sea_temp, Sea_temp == 999.0,NA)) %>%
+      mutate(Wind_speed = replace(Wind_speed, Wind_speed == 99.0, NA)) %>% 
+      mutate(Air_sea_temp = round(Air_temp-Sea_temp),-1) %>% 
+      #mutate(Dewpoint_temp = replace(Dewpoint_temp, Dewpoint_temp == 999.0,NA)) %>% 
+      mutate(Date = as.Date(Date)) %>% 
+      select(Date,Air_temp,Sea_temp,Wind_speed,Air_sea_temp) 
+    
+    #Pipe data into one single dataframe
+    if (is_empty(tmp.tidy))
+    {
+      tmp.tidy <- data.tidy
+    } else
+    {
+      tmp.tidy <- tmp.tidy %>% full_join(data.tidy)
+    } 
+}
+
+# Code below is not in source function file
+station <- c(46034,46035)
+
+for (j in station){
+  tmp.tidy <- NULL
+  for (i in list.files(path =paste0("./Source/",j), pattern = ".txt")){
+        
+        #combine multiple files
+        tmp.tidy <- noaa_combine_file(i,j)
+        
+        #Add in missing date and remove leap yaer data for better analysis
+        tmp.tidy <- tmp.tidy %>% 
+                    pad() %>% 
+                    dplyr::filter(!str_detect(Date,"02-29")) %>% 
+                    mutate(MM = month(Date))
+        write_csv(tmp.tidy, path = paste0("./Output/Raw/",j,".csv"))
+  }
+}
+
+```
+
+```{r webscrapping}
+# webscrapping metadata for buoy stations
+noaa_meta <- function(buoy_station){
+  url <- paste0("https://www.ndbc.noaa.gov/station_page.php?station=",buoy_station)
+
+  des <- url %>% 
+          read_html() %>% 
+          html_nodes("h1") %>% 
+          html_text() %>%
+          trimws() %>% 
+          as.character()
+  
+  des <- gsub(",","",des,fixed = TRUE)
+  
+  meta1 <- url %>% 
+          read_html() %>% 
+          html_nodes("#stn_metadata") %>% 
+          trimws() %>% 
+          as.character()
+  
+  type <- strsplit(meta1,"</b>")[[1]][2]
+  type <- strsplit(type,"<b>")[[1]][2]
+  
+  lat <- word(meta1,start = 1, sep = " N ")
+  lat <- word(lat,-1)
+  lat <- as.numeric(str_extract(lat, "\\-*\\d+\\.*\\d*"))
+  
+  long <- word(meta1,start = 1, sep = " W ")
+  long <- word(long,-1)
+  long <- as.numeric(str_extract(long, "\\-*\\d+\\.*\\d*"))
+  
+  
+  write(paste(buoy_station,des,type,lat,long,url,sep = ","),
+                         file = "./Output/Meta/buoy_meta.csv",
+                         append = TRUE)
+}
+
+```
+
+```{r raw_plot, message = FALSE, warning = FALSE}
+
+noaa_rawplot <- function(buoy_station){
+  
+  tmp <- read_csv(paste0("./Output/Raw/",buoy_station,".csv"))
+
+  tmp2 <- ggplot(data = tmp)+
+          geom_line(aes(x = Date, 
+                        y = Air_temp), 
+                    color = "#F8766D",
+                    size = 0.5)+
+          geom_line(aes(x = Date, 
+                        y = Sea_temp), 
+                    color = "#00BFC4",
+                    size = 0.5)+
+          theme(legend.position = "none", 
+                axis.text.x = element_blank(),
+                axis.ticks.x = element_blank(),
+                axis.title.x = element_blank())+
+          scale_x_date(date_labels = "%b %Y")+
+          labs(y = "Celsius")
+      
+  tmp3 <- ggplot(data = tmp)+
+    
+          geom_line(aes(x = Date, 
+                        y = Wind_speed, 
+                        color = "Wind Speed"), 
+                    color = "#7CAE00", 
+                    size =0.5)+
+          scale_x_date(date_labels = "%b %Y")+
+          labs(x = "Date", 
+               y = "Wind Speed (m/s)")
+  
+  mylegend <- legendGrob(labels = c("Air Temperature", 
+                                    "Sea Temperature", 
+                                    "Wind Speed"),
+                         ncol = 3,
+                         pch = 15,
+                         gp = gpar(col = c("#F8766D","#00BFC4","#7CAE00"), 
+                                   fill = "gray"))
+  
+  b.date <- year(min(tmp$Date))
+  e.date <- year(max(tmp$Date))
+  
+  grid.arrange(arrangeGrob(tmp2,tmp3, ncol = 1), 
+               mylegend,heights=c(10, 1),
+               top = textGrob(paste("Station",
+                                    buoy_station,
+                                    "Historical Information",
+                                    "(",b.date,"-",e.date,")", 
+                                    sep = " ")))
+  
+}
+
+noaa_rawplot(46035)
+
+grid.arrange(mylegend)
+
+
+
+```
+
+```{r timeseries}
+# fill the holes for timeseries
+
+
+
+
+
+```
+
+```{r month_trend, warning = FALSE, message= FALSE}
+tmp <- read_csv("./Output/Raw/46035.csv")
+
+  b.date <- year(min(tmp$Date))
+  e.date <- year(max(tmp$Date))
+
+ggplot(data = tmp, mapping = aes(x = as.factor(MM),
+                                 na.rm = TRUE))+
+  geom_boxplot(fill = "#00BFC4", aes(y = Sea_temp))+
+  scale_x_discrete(breaks=c(1:12),
+        labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))+
+    labs(x = "Month",
+         y = "Sea Temperature (Celsius)",
+         title = paste("Climate Summary Plot","(",b.date,"-",e.date,")", sep = " "))
+
+ggplot(data = tmp, mapping = aes(x = as.factor(MM), 
+                                 y = Air_temp, 
+                                 na.rm = TRUE))+
+  geom_boxplot(fill = "#F8766D")+
+  scale_x_discrete(breaks=c(1:12),
+        labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))+
+    labs(x = "Month",
+         y = "Air Temperature (Celsius)",
+         title = paste("Climate Summary Plot","(",b.date,"-",e.date,")", sep = " "))
+
+ggplot(data = tmp, mapping = aes(x = as.factor(MM), 
+                                 y = Wind_speed, 
+                                 na.rm = TRUE))+
+  geom_boxplot(fill = "#7CAE00")+
+  scale_x_discrete(breaks=c(1:12),
+        labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))+
+    labs(x = "Month",
+         y = "Wind Speed (m/s)",
+         title = paste("Climate Summary Plot","(",b.date,"-",e.date,")", sep = " "))
+  
+
+
+```
+
+
+```{r NASA_surfacetemp}
+# figure this out later ahhhhhhhhhhh
+
+# World map
+worldMap <- getMap()
+world.points <- fortify(worldMap)
+world.points$region <- world.points$id
+
+world.df <- world.points[,c("long","lat","group", "region")]
+
+temp <- read.table("./Source/NASA/amaps.txt", skip=1, header = TRUE, na.strings="9999.0000")
+breaks <- c(-4.1, -4, -2, -1, -.5, -.2, .2, .5, 1, 2, 4, 5.3)
+color_scal <- cbind(
+  val = levels(cut(range(breaks), breaks = breaks)),
+  col = c("#8600FF", "#3F94FE", "#77CAFD", "#99EEFF", "#D9FFD9", "#FFFFFF",
+          "#FFFF4C", "#FFCC00", "#FF7E00", "#FF0000", "#5E0000")
+)
+color_scal <- data.frame(color_scal, stringsAsFactors = FALSE)
+colnames(color_scal) <- list("val", "col")
+color_scal$col <- paste(color_scal$col,"FF", sep = "")
+temp$interval <- cut(temp$array.i.j, breaks = breaks)
+
+rotate_map <- function(angle = -74){
+  ggplot() + 
+    geom_tile(data = temp, aes(x = lon, y = lat, fill = array.i.j.), alpha = 0.8) +
+    geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
+    scale_y_continuous(breaks = (-2:2) * 30) +
+    scale_x_continuous(breaks = (-4:4) * 45) +
+    coord_map("ortho", orientation=c(61, angle, 0))
+}
+
+rotate_map(1)
+```
+
+```{r}
+
+
+
+```
+
