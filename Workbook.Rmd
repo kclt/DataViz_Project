@@ -24,7 +24,18 @@ library(rworldmap)
 library(gpclib)
 library(grid)
 library(gridExtra)
+library(animation)
 ```
+
+#About & Motivation
+
+## Motivation
+
+from the NASA surface temperature blabalbalba -> increase in temperature
+
+## About this project
+
+Looks at buoy around the world and see whether sea and air temperature in different region has increase over the past decade years. Also look at the whether the difference between air and sea temperature has increase or not. 
 
 ```{r source_scrapping, message=FALSE, warning = FALSE}
 noaa_txt_download <- function(buoy_station,start_year,end_year){
@@ -114,6 +125,38 @@ for (j in station){
         write_csv(tmp.tidy, path = paste0("./Output/Raw/",j,".csv"))
   }
 }
+
+# Time series composition requires full unbroke timeseries
+for (k in station){
+  tmp.times <- read_csv(paste0("./Output/Raw/",k,".csv"))
+  b.date <- year(min(tmp.times$Date))
+  e.date <- year(max(tmp.times$Date))
+  
+  t.series.a <- ts(tmp.times[,2],frequency = 365)
+  tryCatch(t.series.a <- na.seadec(t.series.a, algorithm = "interpolation"),
+           error = function(x){t.series.a <- na.locf(t.series.a, option = "locf")})
+  
+  
+  t.series.s <- ts(tmp.times[,3],frequency = 365)
+  tryCatch(t.series.s <- na.seadec(t.series.s, algorithm = "interpolation"),
+           error = function(x){t.series.s <- na.locf(t.series.s, option = "locf")})
+  
+  tmp.times <- tmp.times %>%
+    mutate(Air_temp_f = as.numeric(t.series.a)) %>%
+    mutate(Sea_temp_f = as.numeric(t.series.s))
+    
+  write_csv(tmp.times, path = paste0("./Output/Raw/",k,".csv"))
+}
+
+ggsdc(data = tmp.times, mapping = aes(x = Date, y = Air_temp_f),
+      method = "stl", s.window = "period", frequency = 365)+
+      geom_line() +
+      xlab("Time")+
+      ylab("Celsius")+
+      scale_x_date(date_labels = "%b %Y")+
+      labs(title = "Time Series Decomposition Analysis")
+
+ggplot(data = tmp.times, aes(Date,Air_temp_f))+geom_line()
 
 ```
 
@@ -218,15 +261,6 @@ grid.arrange(mylegend)
 
 ```
 
-```{r timeseries}
-# fill the holes for timeseries
-
-
-
-
-
-```
-
 ```{r month_trend, warning = FALSE, message= FALSE}
 tmp <- read_csv("./Output/Raw/46035.csv")
 
@@ -268,7 +302,6 @@ ggplot(data = tmp, mapping = aes(x = as.factor(MM),
 
 
 ```{r NASA_surfacetemp}
-# figure this out later ahhhhhhhhhhh
 
 # World map
 worldMap <- getMap()
@@ -277,11 +310,11 @@ world.points$region <- world.points$id
 
 world.df <- world.points[,c("long","lat","group", "region")]
 
-temp <- read.table("./Source/NASA/amaps.txt", skip=1, header = TRUE, na.strings="9999.0000")
+temp <- read.table("./Source/NASA/2018.txt", skip=1, header = TRUE, na.strings="9999.0000")
 breaks <- c(-4.1, -4, -2, -1, -.5, -.2, .2, .5, 1, 2, 4, 5.3)
 color_scal <- cbind(
   val = levels(cut(range(breaks), breaks = breaks)),
-  col = c("#8600FF", "#3F94FE", "#77CAFD", "#99EEFF", "#D9FFD9", "#FFFFFF",
+  col = c("#77CAFD", "#99EEFF", "#D9FFD9", "#FFFFFF",
           "#FFFF4C", "#FFCC00", "#FF7E00", "#FF0000", "#5E0000")
 )
 color_scal <- data.frame(color_scal, stringsAsFactors = FALSE)
@@ -291,17 +324,43 @@ temp$interval <- cut(temp$array.i.j, breaks = breaks)
 
 rotate_map <- function(angle = -74){
   ggplot() + 
-    geom_tile(data = temp, aes(x = lon, y = lat, fill = array.i.j.), alpha = 0.8) +
+    geom_tile(data = temp, aes(x = lon, y = lat, fill = interval), alpha = 0.8) +
+    scale_fill_manual("interval", breaks = color_scal$val, values = color_scal$col) +
     geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
     scale_y_continuous(breaks = (-2:2) * 30) +
     scale_x_continuous(breaks = (-4:4) * 45) +
+    labs(title = "Temperature Change (celsius) from 1985 to 2018")+
     coord_map("ortho", orientation=c(61, angle, 0))
 }
 
-rotate_map(1)
+#rotate_map(1)
+
+  # ggplot() + 
+  #   geom_tile(data = temp, aes(x = lon, y = lat, fill = interval), alpha = 0.8) +
+  #   scale_fill_manual("interval", breaks = color_scal$val, values = color_scal$col) +
+  #   geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
+  #   scale_y_continuous(breaks = (-2:2) * 30) +
+  #   scale_x_continuous(breaks = (-4:4) * 45) +
+  #   labs(title = "Temperature Change (celsius) from 1985 to 2018")+
+  #   theme(panel.background = element_blank())
+  
+
 ```
 
 ```{r}
+# Create gif file
+saveGIF({
+  ani.options(nmax = 360)
+  for(i in seq(0,360,by = 5)){
+    print(rotate_map(i))
+    print(i)
+  }
+}, interval = 0.1, outdir="./Output/gif", movie.name = "temp_change.gif")
+
+
+```
+```{r}
+# Animation Map combine data
 
 
 
