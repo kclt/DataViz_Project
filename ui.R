@@ -9,13 +9,12 @@
 #
 # To do: 
 # - Write About 
-# - Create World spin gif (NASA temperature change dataset)[Done]
 # - Write Methodology 
+# - Create World spin gif (NASA temperature change dataset)[Done]
 # - Conduct timeseries decomposition & stuff [Done]
-# - Create animation tab
+# - Create animation tab [Done]
 # - Create stat tab 
-# - Forecasting tab [Done]
-# - Collect Full Data
+# - Collect Full Data [Done]
 ###################################################################
 library(shiny)
 library(shinydashboard)
@@ -178,9 +177,9 @@ dashboardPagePlus(
                              
                     ),
                     tabPanel("Month",
-                             #dropdown(
+                             dropdown(
                                pickerInput(inputId = "Month_variable",
-                                           #label = "Chart",
+                                           label = "Chart",
                                            choices = list(
                                              Temperature = list("Air Temperature"="Air_temp","Sea Temperature"="Sea_temp", "Air Sea Temperature Difference" = "Air_sea_temp"),
                                              "Wind Speed" = list("Wind Speed"="Wind_speed")),
@@ -192,10 +191,10 @@ dashboardPagePlus(
                                            ),
                                            multiple = FALSE
                                ),
-                               #circle = TRUE, icon = icon("gear"),
-                               #status = "danger", width = "300px",
-                               #tooltip = tooltipOptions(title = "Options")
-                             #),
+                             circle = TRUE, icon = icon("gear"),
+                             status = "danger", width = "300px",
+                             tooltip = tooltipOptions(title = "Options")
+                             ),
                              plotlyOutput("month_eda")
                     ),
                     tabPanel("Trend",
@@ -203,9 +202,12 @@ dashboardPagePlus(
                               pickerInput(inputId = "Trend_variable",
                                           label = "Chart",
                                           choices = list(
-                                            Area = list("Air Temperature"="Air_temp_f","Sea Temperature"="Sea_temp_f")),
-                                          selected = "Air_temp_f"
-                                          ),
+                                          Area = list("Air Temperature"="Air_temp_f","Sea Temperature"="Sea_temp_f")),
+                                          selected = "Air_temp_f",
+                                          choicesOpt = list(
+                                          content = c("<div style ='color:#F8766D'>Air Temperature</div>",
+                                                      "<div style ='color:#00BFC4'>Sea Temperature</div>"
+                                          ))),
                               circle = TRUE, icon = icon("gear"),
                               status = "danger", width = "300px",
                               tooltip = tooltipOptions(title = "Options")
@@ -236,17 +238,20 @@ dashboardPagePlus(
         tabItem(tabName = "animation",                
                 fluidRow(
                   box(
-                    width = 6
+                    width = 7,
+                    plotOutput("map_animate_1")
                   ),
                   box(
-                    width = 6
+                    width = 5,
+                    height = 420,
+                    uiOutput("animate_info")
                   ),
                   box(
                     width = 12,
                     sliderInput("yearSlider", "Year:", 
-                                min = 1985, max = 2018, value = 1985, step = 1,
+                                min = 1986, max = 2018, value = 1986, step = 1,
                                 sep = "",
-                                animate = animationOptions(interval = 700, loop = TRUE))
+                                animate = animationOptions(interval = 3000, loop = FALSE))
                   )
                 )
         )

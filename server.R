@@ -13,6 +13,7 @@ library(grid)
 library(gridExtra)
 library(lubridate)
 library(plotly)
+library(rworldmap)
 ###################################################################
 
 # Define server logic required to draw a histogram
@@ -21,7 +22,6 @@ shinyServer(function(input, output,session) {
   marker_data <- read.csv("./Output/Meta/buoy_meta.csv")
   missing_files <- read.csv("./Error/Missing_files.csv")
   
-    
   output$gif <- renderImage({
     list(src = "temp_change.gif",
          contentType = 'image/gif'
@@ -33,14 +33,14 @@ shinyServer(function(input, output,session) {
     
     buoy_icon <- makeIcon(
       iconUrl = "buoy.PNG",
-      iconWidth = 30,
-      iconHeight = 30
+      iconWidth = 20,
+      iconHeight = 20
     )
     
     
     m <- leaflet(data = marker_data) %>% 
          addTiles() %>%
-         setView(lat = 0, lng = 0, zoom = 0.1) %>% 
+         #setView(lat = 0, lng = 0, zoom = 0.1) %>% 
          addMarkers(popup = paste("<center><b><a href='",marker_data$URL,"'>","Station ",marker_data$Buoy,"</a></b></center>",
                                   "<br/> Coordinates: (",marker_data$Latitude," N , ",marker_data$Longitude," W)",
                                   "<br/> Owner: NOAA",
@@ -52,17 +52,17 @@ shinyServer(function(input, output,session) {
     
   })
   
+
+
+  
+  
   observe({
     
-    
-
-    click <- input$buoy_map_marker_click
+      click <- input$buoy_map_marker_click
       if(is.null(click)){
         return()
-    }
-  
-    
-    
+      }
+      
     buoy_station <- marker_data[which(marker_data$Longitude == click$lng  & marker_data$Latitude == click$lat),1]
     buoy_raw <- reactive({
       read_csv(paste0("./Output/Raw/",buoy_station,".csv"))
@@ -70,7 +70,14 @@ shinyServer(function(input, output,session) {
     
     b_date <- min(buoy_raw()$Date)
     e_date <- max(buoy_raw()$Date)
+
     y_axis = list("Air_temp"="Air Temperature (Celsius)","Sea_temp" = "Sea Temperature (Celsius)", "Air_sea_temp" = "Air Sea Temperature Difference (Celsius)", "Wind_speed" = "Wind Speed")  
+    
+    updateDateRangeInput(session,'dateRange',
+                         start = b_date,
+                         end = e_date,
+                         min = b_date,
+                         max = e_date)
     
     tmp2 <- ggplot(data = buoy_raw()[(buoy_raw()$Date >= input$dateRange[1] & buoy_raw()$Date <= input$dateRange[2]),])+
             geom_line(aes(x = Date, 
@@ -96,6 +103,7 @@ shinyServer(function(input, output,session) {
                  y = "Wind Speed (m/s)")
     
     #change 
+  
     output$overview <- renderPlotly(
       subplot(tmp2,tmp3,
               shareX = TRUE,
@@ -112,12 +120,7 @@ shinyServer(function(input, output,session) {
                      autoWidth = TRUE)
     )
     
-    
-    updateDateRangeInput(session,'dateRange',
-                         start = b_date,
-                         end = e_date,
-                         min = b_date,
-                         max = e_date)
+
     
     output$historical_eda <- renderPlotly({
       if ((("Wind_speed" %in% input$Historical_variable) & (length(input$Historical_variable)!= 1))){
@@ -160,7 +163,13 @@ shinyServer(function(input, output,session) {
                                           }}
         
       }
-    })
+  })
+    
+    
+ 
+      
+
+ 
     
     
   output$month_eda <- renderPlotly({
@@ -207,12 +216,47 @@ shinyServer(function(input, output,session) {
         scale_x_date(date_labels = "%b %Y")+
         labs(title = "Time Series Decomposition Analysis")
     }
-    
-
-
-
-     
   })
   
   })
+  
+  
+  output$map_animate_1 <- renderPlot({
+    agg_temp <- read_csv("./Output/aggregate/nasa_agg.csv")
+    
+    worldMap <- getMap()
+    world.points <- fortify(worldMap)
+    world.points$region <- world.points$id
+    world.df <- world.points[,c("long","lat","group", "region")]
+    
+    breaks <- c(-4.1, -4, -2, -1, -.5, -.2, .2, .5, 1, 2, 4, 5.3)
+    val = levels(cut(range(breaks), breaks = breaks))
+    color = c("#FFFFFF", "#D9FFD9", "#99EEFF", "#3F94FE", "#77CAFD", "#FFFF4C",
+              "#FFCC00", "#FF7E00", "#FF0000", "#5E0000", "#5E0000")
+    ggplot() +
+      geom_tile(data = agg_temp[,c(2,3,input$yearSlider-1982)], aes(x = lon, y = lat, fill = !!as.name(input$yearSlider)), alpha = 0.8) +
+      scale_fill_manual(name="Interval", 
+                        breaks = val,
+                        values = color,
+                        drop = FALSE
+                        )+
+      geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
+      scale_y_continuous(breaks = (-2:2) * 30) +
+      scale_x_continuous(breaks = (-4:4) * 45) +
+      labs(title = "Temperature Change (celsius) from 1985")+
+      theme(panel.background = element_blank())
+    
+  })
+  
+  information <- c(
+    "Vienna Convention for the Protection of the Ozone Layer implemented and a joint UNEP/WMO/ICSU Conference on the 'Assessment of the Role of Carbon Dioxide and Other Greenhouse Gases in Climate Variations and Associated Impacts' concluded that greenhouse gases 'are expected' to cause significant warming in the next century and that some warming is inevitable."
+  )
+  
+  output$animate_info <- renderUI({
+    wellPanel(
+      h3(input$yearSlider, align = "center"),
+      p(information[input$yearSlider-1985])
+    )
+  })
+  
 })

@@ -37,6 +37,33 @@ from the NASA surface temperature blabalbalba -> increase in temperature
 
 Looks at buoy around the world and see whether sea and air temperature in different region has increase over the past decade years. Also look at the whether the difference between air and sea temperature has increase or not. 
 
+```{r}
+station <- c(
+  46061,
+46078,
+46082,
+46083,
+42001,
+42036,
+42039,
+42045,
+41010,
+44012,
+44024,
+46035,
+46059,
+46066,
+46072,
+46076,
+51004,
+51002,
+51101,
+46077,
+46080,
+46081,
+46083)
+```
+
 ```{r source_scrapping, message=FALSE, warning = FALSE}
 noaa_txt_download <- function(buoy_station,start_year,end_year){
   
@@ -60,6 +87,13 @@ noaa_txt_download <- function(buoy_station,start_year,end_year){
                  })
 }
 }
+
+for (i in station){
+  
+  noaa_txt_download(i,1985,2018)
+  
+}
+
 ```
 
 ```{r combining_files, message = FALSE}
@@ -108,7 +142,6 @@ noaa_combine_file <- function(n,buoy_station){
 }
 
 # Code below is not in source function file
-station <- c(46034,46035)
 
 for (j in station){
   tmp.tidy <- NULL
@@ -134,12 +167,16 @@ for (k in station){
   
   t.series.a <- ts(tmp.times[,2],frequency = 365)
   tryCatch(t.series.a <- na.seadec(t.series.a, algorithm = "interpolation"),
-           error = function(x){t.series.a <- na.locf(t.series.a, option = "locf")})
+           error = function(x){
+             tryCatch(t.series.a <- na.locf(t.series.a, option = "locf"),
+                      error = function(x)return())})
   
   
   t.series.s <- ts(tmp.times[,3],frequency = 365)
   tryCatch(t.series.s <- na.seadec(t.series.s, algorithm = "interpolation"),
-           error = function(x){t.series.s <- na.locf(t.series.s, option = "locf")})
+           error = function(x){
+             tryCatch(t.series.s <- na.locf(t.series.s, option = "locf"),
+                      error = function(x)return())})
   
   tmp.times <- tmp.times %>%
     mutate(Air_temp_f = as.numeric(t.series.a)) %>%
@@ -196,6 +233,17 @@ noaa_meta <- function(buoy_station){
                          file = "./Output/Meta/buoy_meta.csv",
                          append = TRUE)
 }
+
+
+
+for (i in station){
+  
+   noaa_meta(i)
+  
+}
+
+
+
 
 ```
 
@@ -307,7 +355,6 @@ ggplot(data = tmp, mapping = aes(x = as.factor(MM),
 worldMap <- getMap()
 world.points <- fortify(worldMap)
 world.points$region <- world.points$id
-
 world.df <- world.points[,c("long","lat","group", "region")]
 
 temp <- read.table("./Source/NASA/2018.txt", skip=1, header = TRUE, na.strings="9999.0000")
@@ -335,14 +382,14 @@ rotate_map <- function(angle = -74){
 
 #rotate_map(1)
 
-  # ggplot() + 
-  #   geom_tile(data = temp, aes(x = lon, y = lat, fill = interval), alpha = 0.8) +
-  #   scale_fill_manual("interval", breaks = color_scal$val, values = color_scal$col) +
-  #   geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
-  #   scale_y_continuous(breaks = (-2:2) * 30) +
-  #   scale_x_continuous(breaks = (-4:4) * 45) +
-  #   labs(title = "Temperature Change (celsius) from 1985 to 2018")+
-  #   theme(panel.background = element_blank())
+  ggplot() +
+    geom_tile(data = temp, aes(x = lon, y = lat, fill = interval), alpha = 0.8) +
+    scale_fill_manual("interval", breaks = color_scal$val, values = color_scal$col) +
+    geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
+    scale_y_continuous(breaks = (-2:2) * 30) +
+    scale_x_continuous(breaks = (-4:4) * 45) +
+    labs(title = "Temperature Change (celsius) from 1985 to 2018")+
+    theme(panel.background = element_blank())
   
 
 ```
@@ -364,5 +411,38 @@ saveGIF({
 
 
 
+temp <- read.table("./Source/NASA/2018.txt", skip=1, header = TRUE, na.strings="9999.0000")
+breaks <- c(-4.1, -4, -2, -1, -.5, -.2, .2, .5, 1, 2, 4, 5.3)
+
+temp$interval <- cut(temp$array.i.j, breaks = breaks)
+
+agg_temp <- temp %>%
+            select(lat,lon)
+
+for (year in 1986:2018){
+  temp <- read.table(paste0("./Source/NASA/",year,".txt"),
+                     skip = 1, header = TRUE, na.strings = "9999.0000")
+  breaks <- c(-4.1, -4, -2, -1, -.5, -.2, .2, .5, 1, 2, 4, 5.3)
+  temp$interval <- cut(temp$array.i.j, breaks = breaks)
+  
+  agg_temp <- cbind(agg_temp,temp$interval)
+  names(agg_temp)[names(agg_temp) == "temp$interval"] <- year
+  
+}
+            
+write.csv(agg_temp,"./Output/aggregate/nasa_agg.csv")
+
+  ggplot() +
+    geom_tile(data = agg_temp[,c(1,2,3)], aes(x = lon, y = lat, fill = !!as.name(1986)), alpha = 0.8) +
+    scale_fill_manual(quo(1986),breaks = color_scal$val, values = color_scal$col) +
+    geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
+    scale_y_continuous(breaks = (-2:2) * 30) +
+    scale_x_continuous(breaks = (-4:4) * 45) +
+    labs(title = "Temperature Change (celsius) from 1985 to 2018")+
+    theme(panel.background = element_blank())
+
+library(RColorBrewer)
+brewer.pal(9, "Spectral") -> color_list
+paste(color_list)
 ```
 
