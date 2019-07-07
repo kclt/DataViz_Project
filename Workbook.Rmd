@@ -1,13 +1,9 @@
 ---
-title: "Data Visualization Workbook"
+title: "Data Visualization Climate warming Workbook"
 author: "Kevin LT Chan"
 output:
   pdf_document: default
 ---
-```{r Setup}
-
-```
-
 ```{r library, warning= FALSE, message = FALSE}
 library(tidyverse)
 library(readxl)
@@ -38,33 +34,12 @@ from the NASA surface temperature blabalbalba -> increase in temperature
 Looks at buoy around the world and see whether sea and air temperature in different region has increase over the past decade years. Also look at the whether the difference between air and sea temperature has increase or not. 
 
 ```{r}
-station <- c(
-  46061,
-46078,
-46082,
-46083,
-42001,
-42036,
-42039,
-42045,
-41010,
-44012,
-44024,
-46035,
-46059,
-46066,
-46072,
-46076,
-51004,
-51002,
-51101,
-46077,
-46080,
-46081,
-46083)
+station <- c(46061,46078,46082,46083,42001,42036,42039,42045,41010,44012,44024,46035,46059,46066,46072,46076,51004,51002,51101,46077,46080,46081,46083)
 ```
 
 ```{r source_scrapping, message=FALSE, warning = FALSE}
+# The following r script collects the raw Standard meteorological historical data of a station within the specified year range and save in an output file. 
+
 noaa_txt_download <- function(buoy_station,start_year,end_year){
   
   # Create director folder for buoy_station
@@ -97,6 +72,7 @@ for (i in station){
 ```
 
 ```{r combining_files, message = FALSE}
+# The following script combines the data scrapped data seperate by year to within a single file and conducts data cleaning (date time format discrepancies, NA, missing dates) and conduct interpolation to fill in misssing data inorder to allow for time series analysis. 
 
 noaa_combine_file <- function(n,buoy_station){
 
@@ -141,7 +117,7 @@ noaa_combine_file <- function(n,buoy_station){
     } 
 }
 
-# Code below is not in source function file
+# Loop to combine file
 
 for (j in station){
   tmp.tidy <- NULL
@@ -198,7 +174,7 @@ ggplot(data = tmp.times, aes(Date,Air_temp_f))+geom_line()
 ```
 
 ```{r webscrapping}
-# webscrapping metadata for buoy stations
+# The following script conduct webscrapping in order to collect metadata for each station (coordinates, url, type of buoy, and description of buoy)
 noaa_meta <- function(buoy_station){
   url <- paste0("https://www.ndbc.noaa.gov/station_page.php?station=",buoy_station)
 
@@ -248,6 +224,7 @@ for (i in station){
 ```
 
 ```{r raw_plot, message = FALSE, warning = FALSE}
+# This script is a test plot for the shiny application for histoical EDA, and overview tab (plotting the raw data of air, sea, and wind)
 
 noaa_rawplot <- function(buoy_station){
   
@@ -310,6 +287,8 @@ grid.arrange(mylegend)
 ```
 
 ```{r month_trend, warning = FALSE, message= FALSE}
+# The following script is a test plot for shiny month eda tab
+
 tmp <- read_csv("./Output/Raw/46035.csv")
 
   b.date <- year(min(tmp$Date))
@@ -350,6 +329,7 @@ ggplot(data = tmp, mapping = aes(x = as.factor(MM),
 
 
 ```{r NASA_surfacetemp}
+# the following script is used to create the gif used in the about tab
 
 # World map
 worldMap <- getMap()
@@ -408,8 +388,6 @@ saveGIF({
 ```
 ```{r}
 # Animation Map combine data
-
-
 
 temp <- read.table("./Source/NASA/2018.txt", skip=1, header = TRUE, na.strings="9999.0000")
 breaks <- c(-4.1, -4, -2, -1, -.5, -.2, .2, .5, 1, 2, 4, 5.3)

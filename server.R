@@ -70,14 +70,32 @@ shinyServer(function(input, output,session) {
     
     b_date <- min(buoy_raw()$Date)
     e_date <- max(buoy_raw()$Date)
+    start_date <- Sys.Date() - 3
+    end_date <- Sys.Date() + 3 
 
+    if (input$dateRange[1] >= b_date & input$dateRange[1] >= e_date){
+      start_date <- min(buoy_raw()$Date)
+    } else if (input$dateRange[1] >= b_date){
+      start_date <- input$dateRange[1]
+    } else {start_date <- min(buoy_raw()$Date)}
+    
+    if (input$dateRange[2] >= e_date){
+      end_date <- max(buoy_raw()$Date)
+    } else {
+      end_date <- input$dateRange[2]
+    }
+    
     y_axis = list("Air_temp"="Air Temperature (Celsius)","Sea_temp" = "Sea Temperature (Celsius)", "Air_sea_temp" = "Air Sea Temperature Difference (Celsius)", "Wind_speed" = "Wind Speed")  
     
+    
+    
     updateDateRangeInput(session,'dateRange',
-                         start = b_date,
-                         end = e_date,
-                         min = b_date,
-                         max = e_date)
+                            start = start_date,
+                            end = end_date,
+                           min = b_date,
+                           max = e_date)
+    
+    
     
     tmp2 <- ggplot(data = buoy_raw()[(buoy_raw()$Date >= input$dateRange[1] & buoy_raw()$Date <= input$dateRange[2]),])+
             geom_line(aes(x = Date, 
@@ -220,6 +238,31 @@ shinyServer(function(input, output,session) {
   
   })
   
+  output$legend <- renderImage({
+    list(src = "./www/legend.PNG")
+  },deleteFile = FALSE)
+  
+  output$data_scrap <- renderImage({
+    list(src = "./www/historical.PNG")
+    
+  },deleteFile = FALSE)
+  
+  output$web_scrap <- renderImage({
+    list(src = "./www/meta.PNG")
+  },deleteFile = FALSE)
+  
+  output$month <- renderImage({
+    list(src = "./www/Month.PNG")
+  },deleteFile = FALSE)
+  
+  output$overviews <- renderImage({
+    list(src = "./www/raw.PNG")
+  },deleteFile = FALSE)
+  
+  output$decomposition <- renderImage({
+    list(src = "./www/decomposition.PNG")
+  },deleteFile = FALSE)
+  
   
   output$map_animate_1 <- renderPlot({
     agg_temp <- read_csv("./Output/aggregate/nasa_agg.csv")
@@ -243,18 +286,34 @@ shinyServer(function(input, output,session) {
       geom_path(data = world.df, aes(x = long, y = lat, group = group)) +
       scale_y_continuous(breaks = (-2:2) * 30) +
       scale_x_continuous(breaks = (-4:4) * 45) +
+      theme(plot.title = element_text(hjust = 0.5))+
       labs(title = "Temperature Change (celsius) from 1985")+
       theme(panel.background = element_blank())
     
   })
   
+  output$anomaly <- renderPlotly({
+    anomaly <- read_csv("./Output/aggregate/anomly.csv")
+    ggplot(data = anomaly[1:(input$yearSlider-1985),], aes(x = Year, y = Anomaly))+
+      geom_smooth(method="lm", color = "#000000")+
+      geom_point(color = "#FF0000")+
+      ylim(min = 0, max = 1.1)+
+      xlim(min = 1985, max = 2018)+
+      labs(title = "temperature Anomly compared to 1951-1980 avg",
+           y = "difference")+
+      theme(plot.title = element_text(hjust = 0.49),
+            panel.background = element_blank(),
+            axis.text.y = element_text(size = 6))
+    
+  })
+  
   information <- c(
-    "Vienna Convention for the Protection of the Ozone Layer implemented and a joint UNEP/WMO/ICSU Conference on the 'Assessment of the Role of Carbon Dioxide and Other Greenhouse Gases in Climate Variations and Associated Impacts' concluded that greenhouse gases 'are expected' to cause significant warming in the next century and that some warming is inevitable."
+    "Vienna Convention for the Protection of the Ozone Layer implemented"
   )
   
   output$animate_info <- renderUI({
     wellPanel(
-      h3(input$yearSlider, align = "center"),
+      h5(paste(input$yearSlider,"information & Trend", sep = " "), align = "center"),
       p(information[input$yearSlider-1985])
     )
   })
