@@ -423,4 +423,11 @@ library(RColorBrewer)
 brewer.pal(9, "Spectral") -> color_list
 paste(color_list)
 ```
+```{r}
+tmp<-read_csv("./Output/aggregate/anomly.csv")
+
+tmp2 <- tmp %>% gather(key = Region, value = Anomaly, -Year)
+
+write.csv(tmp2,"./Output/aggregate/anomaly.csv")
+```
 
