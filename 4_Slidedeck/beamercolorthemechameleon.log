@@ -1,0 +1,17 @@
+This is pdfTeX, Version 3.1415926-2.4-1.40.13 (MiKTeX 2.9 64-bit) (preloaded format=pdftex 2014.2.9)  20 NOV 2015 15:42
+entering extended mode
+**C:/Research/visit*-*conference/2015/MODSIM2015/Presentation/beamer-torino-0.1
+/beamercolorthemechameleon.sty
+
+("C:/Research/visit - conference/2015/MODSIM2015/Presentation/beamer-torino-0.1
+/beamercolorthemechameleon.sty"
+! Undefined control sequence.
+l.8 \mode
+         <presentation>
+? 
+! Emergency stop.
+l.8 \mode
+         <presentation>
+End of file on the terminal!
+
+!  ==> Fatal error occurred, no output PDF file produced!
