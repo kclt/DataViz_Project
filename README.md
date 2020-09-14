@@ -5,7 +5,8 @@ A data visualiation of climate warming through buoy collected data.
 ## Interative Dashboard (Shiny R)
 
 <a href = https://kclt.shinyapps.io/climate_warming> Interactive Dashboard</a>
-![alt text](./www/robust.png)
+
+![alt text](./www/dashboard.png)
 
 ## Introduction
 The National Data Buoy Center (NDBC) is a part of the
