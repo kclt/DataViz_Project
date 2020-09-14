@@ -33,7 +33,7 @@ The following, we will look more closely at a specific weather Buoy (46035) loca
 
 Over the years the date time format of the files has change thus to combine them we have to standardize the inconsistency to allow for time series to make sense. After combining all the files, we noticed that there are missing dates in between the available dates, thus we have to add those back in and also for better time series analysis remove February 29th (leap year). As to conduct any time series analysis, it would require for a full unbroken time series. 
 
-![alt text](./www/raw.png)
+![alt text](./www/raw.PNG)
 
 We would thus have to filling in the missing values. Normally we would be able to use conventional methods such as last observation carry forward, but since it is observe there are sustained period (> couple of months) of missing or unavailable data, we would have to use either forecast/imputation to fill in the missing values. 
 
