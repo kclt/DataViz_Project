@@ -5,6 +5,7 @@ A data visualiation of climate warming through buoy collected data.
 ## Interative Dashboard (Shiny R)
 
 <a href = https://kclt.shinyapps.io/climate_warming> Interactive Dashboard</a>
+![alt text](./www/robust.png)
 
 ## Introduction
 The National Data Buoy Center (NDBC) is a part of the
@@ -48,8 +49,8 @@ Due to the effect of seaonality, it is hard to observe whether there is a positi
 
 Taking a closer at the trend, we fitted linear regressions and find that the slopes are positive and they are statistically significant. Thus we conclude that Global warming did exist as the temperatures (both sea and air) increased over the past 30 years.
 
-![alt text](./www/TrendA.png)
-![alt text](./www/TrendB.png)
+![alt text](./www/trendA.png)
+![alt text](./www/trendS.png)
 
 ## Robustness Check
 
