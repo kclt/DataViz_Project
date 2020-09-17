@@ -1,8 +1,8 @@
 # Buoy & Climate Warming - Data Visualization
 
-A data visualiation of climate warming through buoy collected data.
+A data visualization of climate warming through buoy collected data.
 
-## Interative Dashboard (Shiny R)
+## Interactive Dashboard (Shiny R)
 
 <a href = https://kclt.shinyapps.io/climate_warming> Interactive Dashboard</a>
 
@@ -14,7 +14,7 @@ National Oceanic and Atmospheric Administration’s (NOAA)
 National Weather Service (NWS) of the US government. NDBC deploys weather buoys which are instruments which
 collect weather and ocean data within the world’s oceans.
 
-THe aim of this project is to answer the following question:
+The aim of this project is to answer the following question:
 1. Have the temperatures (both air and sea) increased over the past 30 years? 
 
 ## Data
@@ -31,20 +31,20 @@ The following, we will look more closely at a specific weather Buoy (46035) loca
 
 ## Data Cleaning 
 
-Over the years the date time format of the files has change thus to combine them we have to standardize the inconsistency to allow for time series to make sense. After combining all the files, we noticed that there are missing dates in between the available dates, thus we have to add those back in and also for better time series analysis remove February 29th (leap year). As to conduct any time series analysis, it would require for a full unbroken time series. 
+Over the years the date time format of the files has change thus to combine them we have to standardize the inconsistency to allow for time series to make sense. After combining all the files, we noticed that there are missing dates in between the available dates, thus we must add those back in and also for better time series analysis remove February 29th (leap year). As to conduct any time series analysis, it would require for a full unbroken time series. 
 
 ![alt text](./www/raw.PNG)
 
 We would thus have to filling in the missing values. Normally we would be able to use conventional methods such as last observation carry forward, but since it is observe there are sustained period (> couple of months) of missing or unavailable data, we would have to use either forecast/imputation to fill in the missing values. 
 
-Here from existing data we observe seasonal trend, we opted to use seasonal decomposed missing value imputation method (Removes the seasonal component from the time series, performs imputation on the deseasonalized series and afterwards adds the seasonal component again). Finally, after all that we generate a csv file that we would be able to use for visualizations.
+Here from existing data we observe seasonal trend, we opted to use seasonal decomposed missing value imputation method (Removes the seasonal component from the time series, performs imputation on the de-seasonalized series and afterwards adds the seasonal component again). Finally, after all that we generate a csv file that we would be able to use for visualizations.
 
 ![alt text](./www/cleaned.png)
 
 
 ## Analysis
 
-Due to the effect of seaonality, it is hard to observe whether there is a positive upwards trend. As the upward trend view from an overview maybe caused by seasonality, thus we conduct a time series decomposition, which allows us to seperate the time series into season, trend and residual errors. Then from the trend line, we would be able to observe whether an region has shown an upward increasing trend over the specified time period or not.
+Due to the effect of seasonality, it is hard to observe whether there is a positive upwards trend. As the upward trend view from an overview maybe caused by seasonality, thus we conduct a time series decomposition, which allows us to separate the time series into season, trend and residual errors. Then from the trend line, we would be able to observe whether an region has shown an upward increasing trend over the specified time period or not.
 
 ![alt text](./www/decompose.png)
 
@@ -61,5 +61,6 @@ To check whether sampling affected our evaluation of temperature change, lets co
 
 Similar results and conclusions have been obtained as
 compared to the noon time data.
+
 
 
